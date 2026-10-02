@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Server Status</title>
+  <!-- Retro pixel font for a Minecraft vibe -->
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet" />
+  <style>
+    /* Basic Reset */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    /* Body: Minecraft background & no scrolling */
+    body {
+      font-family: 'Press Start 2P', cursive;
+      background: url('https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fstatic.wikia.nocookie.net%2Fminecraft_gamepedia%2Fimages%2Fe%2Fec%2FEnd_Poem_background.png')
+                  no-repeat center center fixed;
+      background-size: cover;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Card container */
+    .card {
+      background: rgba(0, 0, 0, 0.7);
+      border: 2px solid #444;
+      border-radius: 6px;
+      max-width: 400px;
+      width: 100%;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.7);
+    }
+
+    /* Title */
+    .card h2 {
+      font-size: 1.5em;
+      color: #FFD700;
+      text-shadow: 1px 1px 2px #000;
+      margin-bottom: 15px;
+    }
+
+    /* Domain link */
+    .domain {
+      font-size: 1.1em;
+      margin-bottom: 15px;
+      color: #FFD700;
+      word-wrap: break-word;
+    }
+    .domain a {
+      color: #FFD700;
+      text-decoration: none;
+    }
+    .domain a:hover {
+      text-decoration: underline;
+    }
+
+    /* Status row */
+    .status {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 15px;
+    }
+    .status-text {
+      font-size: 1.1em;
+      margin-right: 8px;
+    }
+    .status-icon {
+      font-size: 1.1em;
+    }
+
+    /* Players info */
+    .info {
+      font-size: 1em;
+      margin-bottom: 15px;
+    }
+    
+    /* Connected Players Section */
+    .players-section {
+      margin-top: 20px;
+      text-align: left;
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+    }
+    .players-section h3 {
+      font-size: 1.2em;
+      color: #FFD700;
+      margin-bottom: 10px;
+    }
+    .player-item {
+      display: flex;
+      align-items: center;
+      padding: 5px 0;
+      border-bottom: 1px solid #444;
+      font-size: 0.9em;
+    }
+    .player-item:last-child {
+      border-bottom: none;
+    }
+    .player-head {
+      margin-right: 10px;
+      border: 2px solid #444;
+      border-radius: 50%;
+      width: 32px;
+      height: 32px;
+    }
+
+    /* Footer (version) */
+    .footer {
+      margin-top: 10px;
+      border-top: 1px dashed #444;
+      padding-top: 10px;
+      font-size: 0.9em;
+      color: #ccc;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Server Status</h2>
+    <!-- Domain link -->
+    <div class="domain" id="server-domain">
+      <a id="server-link" target="_blank" rel="noopener"></a>
+    </div>
+    <!-- Status text and icon -->
+    <div class="status">
+      <div class="status-text" id="server-status">Loading...</div>
+      <div class="status-icon" id="status-icon"></div>
+    </div>
+    <!-- Players count (from mcsrvstat API) -->
+    <div class="info">
+      Players: <span id="players-online">0</span>
+    </div>
+    <!-- Connected Players Section -->
+    <div class="players-section">
+      <h3>Connected Players</h3>
+      <div id="players-list">Loading...</div>
+    </div>
+    <!-- Version footer -->
+    <div class="footer">
+      Version: <span id="version">Loading...</span>
+    </div>
+  </div>
+  
+  <script>
+    // Your server's address, and an optional page the address links to (rules, Discord...).
+    const SERVER_ADDRESS = "play.example.com";
+    const SERVER_LINK = "";
+
+    const link = document.getElementById('server-link');
+    link.textContent = SERVER_ADDRESS;
+    if (SERVER_LINK) link.href = SERVER_LINK;
+
+    async function fetchServerStats() {
+      try {
+        // Fetch server status from your Netlify endpoint
+        const response = await fetch('/.netlify/functions/serverStats');
+        const json = await response.json();
+        
+        // Validate the response structure
+        if (json.status !== "ok" || !json.data) {
+          throw new Error("Invalid response data");
+        }
+        
+        const data = json.data;
+        const statusTextEl = document.getElementById('server-status');
+        const statusIconEl = document.getElementById('status-icon');
+        
+        // Update status based on your original API
+        if (data.running) {
+          statusTextEl.innerText = "Online";
+          statusTextEl.style.color = "#00c853"; // Green
+          statusIconEl.innerHTML = "&#10004;";   // ✓
+          statusIconEl.style.color = "#00c853";
+        } else {
+          statusTextEl.innerText = "Offline";
+          statusTextEl.style.color = "#ff5252"; // Red
+          statusIconEl.innerHTML = "&#10008;";  // ✘
+          statusIconEl.style.color = "#ff5252";
+        }
+        
+        // Update version info from your original API
+        document.getElementById('version').innerText = data.version || "Unknown";
+      } catch (error) {
+        console.error("Error fetching server stats:", error);
+        document.querySelector('.card').innerHTML = "<h2>Error loading server status</h2>";
+      }
+      
+      // Now fetch the players data from the new API endpoint
+      try {
+        const playersResponse = await fetch('https://api.mcsrvstat.us/3/' + encodeURIComponent(SERVER_ADDRESS));
+        const playersJson = await playersResponse.json();
+        
+        // Use players.online from new API to update players count
+        if (playersJson && playersJson.players) {
+          document.getElementById('players-online').innerText = playersJson.players.online || "0";
+        }
+        
+        const playersListEl = document.getElementById('players-list');
+        let players = [];
+        if (playersJson && playersJson.players && Array.isArray(playersJson.players.list)) {
+          players = playersJson.players.list;
+        }
+        
+        if (players.length === 0) {
+          playersListEl.innerHTML = "<div class='player-item'>No players online</div>";
+        } else {
+          playersListEl.innerHTML = "";
+          for (const player of players) {
+            const item = document.createElement('div');
+            item.className = 'player-item';
+            const head = document.createElement('img');
+            head.className = 'player-head';
+            head.src = 'https://minotar.net/helm/' + encodeURIComponent(player.name) + '/32.png';
+            head.alt = player.name + "'s head";
+            const name = document.createElement('span');
+            name.textContent = player.name;
+            item.append(head, name);
+            playersListEl.append(item);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching players data:", error);
+        document.getElementById('players-list').innerHTML = "<div class='player-item'>Error loading players</div>";
+      }
+    }
+    
+    window.onload = fetchServerStats;
+  </script>
+</body>
+</html>
